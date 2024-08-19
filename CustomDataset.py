@@ -31,14 +31,16 @@ def create_dataloaders(data_dir, class_names, batch_size=4, num_workers=4, pin_m
 
     # Create datasets
     image_datasets = {
-        'train': CustomImageDataset(os.path.join(data_dir, 'train'), class_names, transform=train_transform),
-        'val': CustomImageDataset(os.path.join(data_dir, 'val'), class_names, transform=val_transform)
+        'train': CustomImageDataset(os.path.join(data_dir, 'train'), class_names, transform=None),
+        'val': CustomImageDataset(os.path.join(data_dir, 'val'), class_names, transform=None)
     }
 
- 
+    image_datasets['train'].print_dataset_summary()
+    image_datasets['val'].print_dataset_summary()
+
     # Create DataLoaders with transformations applied at the batch level
     dataloaders = {
-        x: CustomDataLoader(image_datasets[x], batch_size=batch_size, shuffle=(x == 'train'), num_workers=num_workers, collate_fn=None, pin_memory=pin_memory, transform=None)#(train_transform if x == 'train' else val_transform))
+        x: CustomDataLoader(image_datasets[x], batch_size=batch_size, shuffle=(x == 'train'), num_workers=num_workers, collate_fn=None, pin_memory=pin_memory, transform=(train_transform if x == 'train' else val_transform))
         for x in ['train', 'val']
     }
 
@@ -63,7 +65,7 @@ def custom_collate_fn(batch):
     images, labels = zip(*batch)
     
     # Stack images into a single NumPy array
-    images = np.array(np.stack(images, axis=0))
+    images = np.array(images)
     
     # Convert labels to a NumPy array
     labels = np.array(labels)
@@ -92,20 +94,48 @@ class CustomImageDataset(Dataset):
 
     def __getitem__(self, idx):
         img_path = self.img_paths[idx]
+
+        # Load the image using PIL
         image = Image.open(img_path).convert("RGB")
+
+        # Convert the image to a NumPy array
+        image = np.array(image)
         
-        # Convert image to a tensor and send to GPU
+        # if (image.shape[0] or image.shape[1]) != 150:
+        #     print(img_path)
+        #     print(image.shape)
+            
+
+        # # Convert image to a tensor and send to GPU
         image = transforms.ToTensor()(image).to('cuda')
         image = image / 255.0
         
         label = self.labels[idx]
-        if self.transform:
-            image = self.transform(image)
+        # if self.transform:
+        #     image = self.transform(image)
         return image, label
 
-    
+    def print_dataset_summary(self):
+        summary = {}
+        total_images = 0
 
-# Custom DataLoader
+        for class_name in self.class_names:
+            class_dir = os.path.join(self.img_dir, class_name)
+            num_images = len([img_name for img_name in os.listdir(class_dir) if img_name.endswith(".jpg")])
+            summary[class_name] = num_images
+            total_images += num_images
+
+        num_classes = len(self.class_names)
+
+        print("Dataset Summary:")
+        print("----------------")
+        print(f"Total number of images: {total_images}")
+        print(f"Number of classes: {num_classes}")
+        print("\nNumber of images per class:")
+        for class_name, num_images in summary.items():
+            print(f" - {class_name}: {num_images} images")
+
+# Custom DataLoader 
 class CustomDataLoader(DataLoader):
     def __init__(self, dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=False, collate_fn=None, transform=None):
         super(CustomDataLoader, self).__init__(
