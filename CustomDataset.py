@@ -41,7 +41,7 @@ def create_dataloaders(data_dir, class_names, batch_size=4, num_workers=4, pin_m
 
     # Create DataLoaders with transformations applied at the batch level
     dataloaders = {
-        x: CustomDataLoader(image_datasets[x], batch_size=batch_size, shuffle=(x == 'train'), num_workers=num_workers, collate_fn=None, pin_memory=pin_memory, transform=(train_transform if x == 'train' else val_transform))
+        x: CustomDataLoader(image_datasets[x], batch_size=batch_size, shuffle=(x == 'train'), num_workers=num_workers, collate_fn=custom_collate_fn, pin_memory=pin_memory, transform=(train_transform if x == 'train' else val_transform))
         for x in ['train', 'val']
     }
 
@@ -49,30 +49,29 @@ def create_dataloaders(data_dir, class_names, batch_size=4, num_workers=4, pin_m
     dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
     return dataloaders, dataset_sizes
 
-import numpy as np
-
 def custom_collate_fn(batch):
     """
-    Custom collate function to process a batch of data using NumPy arrays.
-    
+    Custom collate function to handle a batch of tensors where the images are not in 
+    channel-first order (C, H, W). Converts the image tensor to channel-first order 
+    and prepares the batch for PyTorch training.
+
     Args:
-        batch (list): A list of tuples (image, label) where image is a NumPy array and label is an integer.
+        batch (list of tuples): A list of tuples where each tuple contains a tensor 
+                                representing the image and a corresponding label (int, float, or tensor).
     
     Returns:
-        tuple: A tuple of (images, labels) where images is a batch of images as NumPy arrays and labels as a NumPy array.
+        images (torch.Tensor): A tensor of shape (batch_size, C, H, W) containing the images.
+        labels (torch.Tensor): A tensor of shape (batch_size,) containing the labels.
     """
-    # Separate images and labels
     images, labels = zip(*batch)
     
-    # Stack images into a single NumPy array
-    # images = np.array(images)
-    images = torch.stack(images).permute(0, 3, 1, 2)
-    # Convert labels to a NumPy array
-    # labels = np.array(labels)
-    labels = torch.stack(labels)
-
+    # Stack the images to form a batch tensor and permute to (C, H, W)
+    images = torch.stack(images)
+    
+    # Convert labels to a tensor (handles labels that are not tensors)
+    labels = torch.tensor(labels, dtype=torch.long)
+    
     return images, labels
-
 
 # Custom Image Dataset
 class CustomImageDataset(Dataset):
