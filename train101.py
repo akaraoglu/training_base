@@ -20,7 +20,7 @@ num_ftrs = model.classifier[3].in_features  # Last layer's in_features
 model.classifier[3] = nn.Linear(num_ftrs, len(class_names))
 
 # Move the model to the GPU
-model = model.to(device).float()
+model = model.to(device)
 
 # Define the loss function
 criterion = nn.CrossEntropyLoss()
@@ -33,7 +33,7 @@ scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
 
 # Create DataLoaders
 data_dir = r'E:/datasets/intel_obj'
-dataloaders, dataset_sizes = create_dataloaders(data_dir, class_names, batch_size=32, num_workers=4, pin_memory=False)
+dataloaders, dataset_sizes = create_dataloaders(data_dir, class_names, batch_size=32, num_workers=1, pin_memory=True)
 
 # Training loop
 def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
@@ -53,8 +53,8 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
             running_corrects = 0
 
             for inputs, labels in dataloaders[phase]:
-                inputs = inputs.to(device, dtype=torch.float)
-                labels = labels.type(torch.LongTensor).to(device)
+                # inputs = inputs.to(device, dtype=torch.float)
+                # labels = labels.to(device, dtype=torch.long)
 
                 optimizer.zero_grad()
 

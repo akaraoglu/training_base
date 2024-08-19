@@ -1,28 +1,29 @@
 # custom_dataset.py
 
 import torch
+import torch.utils
 from torch.utils.data import Dataset, DataLoader
+import torch.utils.data
 from torchvision import transforms
 from torchvision.transforms import v2 as F
 from PIL import Image
 import numpy as np
 import os
-from GPUDataAugmentation import NumpyToCudaTensor
+from GPUDataAugmentation import NumpyToCudaTensor, ToDeviceAndNormalize
 
 # Function to create DataLoaders
 def create_dataloaders(data_dir, class_names, batch_size=4, num_workers=4, pin_memory=True):
     # Define the transformations for training and validation
     train_transform  = transforms.Compose([
-        # NumpyToCudaTensor(),
+        ToDeviceAndNormalize(),
         F.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         F.RandomResizedCrop(size=(256, 256), antialias=True),
         F.RandomHorizontalFlip(p=0.5),
         F.RandomVerticalFlip(p=0.5)
     ])
     
-
     val_transform   = F.Compose([
-        # NumpyToCudaTensor(),
+        ToDeviceAndNormalize(),
         F.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         F.RandomResizedCrop(size=(256, 256), antialias=True),
         F.RandomHorizontalFlip(p=0.5),
@@ -35,8 +36,8 @@ def create_dataloaders(data_dir, class_names, batch_size=4, num_workers=4, pin_m
         'val': CustomImageDataset(os.path.join(data_dir, 'val'), class_names, transform=None)
     }
 
-    image_datasets['train'].print_dataset_summary()
-    image_datasets['val'].print_dataset_summary()
+    # image_datasets['train'].print_dataset_summary()
+    # image_datasets['val'].print_dataset_summary()
 
     # Create DataLoaders with transformations applied at the batch level
     dataloaders = {
@@ -46,7 +47,6 @@ def create_dataloaders(data_dir, class_names, batch_size=4, num_workers=4, pin_m
 
     # Get dataset sizes
     dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
-    
     return dataloaders, dataset_sizes
 
 import numpy as np
@@ -65,11 +65,12 @@ def custom_collate_fn(batch):
     images, labels = zip(*batch)
     
     # Stack images into a single NumPy array
-    images = np.array(images)
-    
+    # images = np.array(images)
+    images = torch.stack(images).permute(0, 3, 1, 2)
     # Convert labels to a NumPy array
-    labels = np.array(labels)
-    
+    # labels = np.array(labels)
+    labels = torch.stack(labels)
+
     return images, labels
 
 
@@ -107,8 +108,7 @@ class CustomImageDataset(Dataset):
             
 
         # # Convert image to a tensor and send to GPU
-        image = transforms.ToTensor()(image).to('cuda')
-        image = image / 255.0
+        image = transforms.ToTensor()(image)
         
         label = self.labels[idx]
         # if self.transform:
@@ -153,9 +153,7 @@ class CustomDataLoader(DataLoader):
             # Apply batch-level transformations
             if self.transform:
                 images = self.transform(images)
-
-            labels = torch.tensor(labels).to('cuda')
-
-            yield images, labels
+            
+            yield images, labels.to("cuda:0")
             
     
