@@ -2,13 +2,30 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from torchvision.transforms import v2 as F
+import random
 from PIL import Image
 import numpy as np
 import os
-from GPUDataAugmentation import NumpyToCudaTensor, ToDeviceAndNormalize
+from src.CustomDataAugmentation import NumpyToCudaTensor, ToDeviceAndNormalize, BoostSaturation
+
+# Function to set random seeds
+def set_random_seeds(seed):
+    """
+    Set random seeds for reproducibility.
+    
+    Args:
+        seed (int): The seed to set.
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
 
 # Function to create DataLoaders for training and validation datasets
-def create_dataloaders(data_dir, class_names, batch_size=4, num_workers=4, pin_memory=True):
+def create_dataloaders(data_dir, class_names, batch_size=4, num_workers=4, pin_memory=True, seed=None):
     """
     Create DataLoaders for training and validation datasets with batch-level transformations.
 
@@ -18,14 +35,21 @@ def create_dataloaders(data_dir, class_names, batch_size=4, num_workers=4, pin_m
         batch_size (int): Number of samples per batch.
         num_workers (int): Number of subprocesses to use for data loading.
         pin_memory (bool): Whether to copy tensors into CUDA pinned memory. 
+        seed (int, optional): Random seed for reproducibility.
 
     Returns:
         dict: Dictionary containing DataLoaders for 'train' and 'val' datasets.
         dict: Dictionary containing the sizes of the 'train' and 'val' datasets.
     """
+    if seed is not None:
+        set_random_seeds(seed)
+    else:
+        set_random_seeds(1234)
+    
     # Define the transformations for training and validation
     train_transform = transforms.Compose([
         ToDeviceAndNormalize(),
+        BoostSaturation(threshold=0.87, boost_factor=2), 
         F.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         F.RandomResizedCrop(size=(256, 256), antialias=True),
         F.RandomHorizontalFlip(p=0.5),

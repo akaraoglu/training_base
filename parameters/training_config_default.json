@@ -8,13 +8,13 @@
     "batch_size": 32,
     "num_workers": 1,
     "pin_memory": true,
-    "learning_rate": 0.001,
+    "learning_rate": 0.0001,
     "momentum": 0.9,
     "step_size": 7,
     "gamma": 0.1,
     "num_epochs": 25,
     "output_model_path": "mobilenet_v3_best_model.pth",
-    "tensorboard_log_dir" : "log_train",
+    "log_dir" : "log_train",
     "val_interval": 5,
     "save_interval": 5
 }

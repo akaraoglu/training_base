@@ -1,19 +1,16 @@
+import os
+import time
+import json
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import models
 from torchvision.utils import make_grid
 from torch.utils.tensorboard import SummaryWriter
-from CustomDataset import create_dataloaders
 from multiprocessing import freeze_support
-import time
-import json
-import os
 from datetime import datetime
 
-#############
-# TODO:
-# Save the code and settings for each train as zip file. 
+from src.CustomDataset import create_dataloaders
 
 class Trainator101:
     def __init__(self, config_path='parameters/training_config_default.json'):
@@ -24,10 +21,10 @@ class Trainator101:
         # Initialize device
         self.device = torch.device(self.config['device'] if torch.cuda.is_available() else "cpu")
 
-        # Ensure the tensorboard_log_dir exists and create a date-time specific folder
-        os.makedirs(self.config['tensorboard_log_dir'], exist_ok=True)
+        # Ensure the log_dir exists and create a date-time specific folder
+        os.makedirs(self.config['log_dir'], exist_ok=True)
         current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
-        self.training_log_dir = os.path.join(self.config['tensorboard_log_dir'], f'training_{current_time}')
+        self.training_log_dir = os.path.join(self.config['log_dir'], f'training_{current_time}')
         os.makedirs(self.training_log_dir, exist_ok=True)
 
         # Initialize the TensorBoard writer with the specific log directory
@@ -46,7 +43,7 @@ class Trainator101:
 
     def _initialize_model(self):
         """Initialize and modify the model to match the number of classes."""
-        model = models.mobilenet_v3_large(weights=models.MobileNet_V3_Large_Weights.IMAGENET1K_V1)
+        model = models.mobilenet_v3_small(weights=models.MobileNet_V3_Small_Weights.IMAGENET1K_V1)
         num_ftrs = model.classifier[3].in_features
         model.classifier[3] = nn.Linear(num_ftrs, self.config['num_classes'])
         model = model.to(self.device)
