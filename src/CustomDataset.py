@@ -1,12 +1,12 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
-from torchvision.transforms import v2 as F
+from torchvision.transforms import v2
 import random
 from PIL import Image
 import numpy as np
 import os
-from src.CustomDataAugmentation import NumpyToCudaTensor, ToDeviceAndNormalize, BoostSaturation
+import  src.CustomDataAugmentation as CDA
 
 # Function to set random seeds
 def set_random_seeds(seed):
@@ -45,22 +45,6 @@ def create_dataloaders(data_dir, class_names, batch_size=4, num_workers=4, pin_m
         set_random_seeds(seed)
     else:
         set_random_seeds(1234)
-    
-    # Define the transformations for training and validation
-    train_transform = transforms.Compose([
-        ToDeviceAndNormalize(),
-        BoostSaturation(threshold=0.87, boost_factor=2), 
-        F.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        F.RandomResizedCrop(size=(256, 256), antialias=True),
-        F.RandomHorizontalFlip(p=0.5),
-        F.RandomVerticalFlip(p=0.5)
-    ])
-
-    val_transform = transforms.Compose([
-        ToDeviceAndNormalize(),
-        F.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        F.Resize(size=(256, 256), antialias=True),  # Resize instead of RandomResizedCrop for validation
-    ])
 
     # Create datasets without applying transformations initially
     image_datasets = {
@@ -77,7 +61,7 @@ def create_dataloaders(data_dir, class_names, batch_size=4, num_workers=4, pin_m
             num_workers=num_workers,
             pin_memory=pin_memory,
             collate_fn=custom_collate_fn,
-            transform=(train_transform if x == 'train' else val_transform)
+            transform=x
         )
         for x in ['train', 'val']
     }
@@ -89,25 +73,24 @@ def create_dataloaders(data_dir, class_names, batch_size=4, num_workers=4, pin_m
 # Custom collate function to process a batch of data
 def custom_collate_fn(batch):
     """
-    Custom collate function to handle a batch of tensors where the images are not in channel-first order (C, H, W).
+    Custom collate function to handle a batch of data.
 
     Args:
-        batch (list of tuples): A list of tuples where each tuple contains a tensor 
-                                representing the image and a corresponding label.
+        batch (list of dicts): A list of dictionaries where each dictionary contains 
+                               the 'input_image', 'gt_image', and 'label'.
 
     Returns:
-        torch.Tensor: A batch tensor of images in (batch_size, C, H, W) format.
-        torch.Tensor: A tensor containing the labels.
+        dict: A dictionary containing batched 'images_input'
     """
-    images, labels = zip(*batch)
-    
-    # Stack images into a batch and permute to (C, H, W)
-    images = torch.stack(images)
-    
-    # Convert labels to a tensor
-    labels = torch.tensor(labels, dtype=torch.long)
-    
-    return images, labels
+    input_images = torch.stack([item['images_input'] for item in batch])
+    # gt_images = torch.stack([item['gt_image'] for item in batch])
+    # labels = torch.tensor([item['label'] for item in batch], dtype=torch.long)
+    batch_dict = {'images_input': input_images 
+                #   'gt_images': gt_images, 
+                #   'labels': labels
+                  }
+    return batch_dict
+
 
 # Custom Image Dataset for loading images and labels
 class CustomImageDataset(Dataset):
@@ -151,18 +134,16 @@ class CustomImageDataset(Dataset):
         img_path = self.img_paths[idx]
 
         # Load and convert image to RGB format
-        image = Image.open(img_path).convert("RGB")
+        input_image = Image.open(img_path).convert("RGB")
 
         # Convert image to a NumPy array and then to a tensor
-        image = transforms.ToTensor()(np.array(image))
+        input_image = transforms.ToTensor()(np.array(input_image))
         
-        label = self.labels[idx]
-
         # Apply any transformations (if provided)
         if self.transform:
-            image = self.transform(image)
+            input_image = self.transform(input_image)
 
-        return image, label
+        return {'images_input': input_image}
 
     def print_dataset_summary(self):
         """
@@ -212,6 +193,40 @@ class CustomDataLoader(DataLoader):
             pin_memory=pin_memory,
             collate_fn=collate_fn
         )
+        # Define the transformations for training and validation
+        self.train_transform_input = v2.Compose([
+            CDA.ToDevice(),
+            CDA.BoostBrightness(threshold=0.87, boost_factor=2), 
+            v2.RandomHorizontalFlip(p=0.5),
+            v2.RandomVerticalFlip(p=0.5),
+            v2.RandomCrop((150,150)),
+            v2.ColorJitter(brightness=.5, hue=.3),
+            v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+
+        # Define the transformations for training and validation
+        self.val_transform_input = v2.Compose([
+            CDA.ToDevice(),
+            CDA.BoostBrightness(threshold=0.87, boost_factor=2), 
+            # v2.RandomHorizontalFlip(p=0.5),
+            # v2.RandomVerticalFlip(p=0.5),
+            # v2.RandomCrop((150,150)),
+            # v2.ColorJitter(brightness=.5, hue=.3),
+            v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+
+
+        # # Define the transformations for training and validation
+        # self.transform_GT = v2.Compose([
+        #     CDA.ToDevice(),
+        #     CDA.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        # ])
+
+        self.transform_GT = v2.Compose([
+            CDA.ToDevice(),
+            v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+        
         self.transform = transform
 
     def __iter__(self):
@@ -219,13 +234,20 @@ class CustomDataLoader(DataLoader):
         Iterate over the dataset, applying the batch-level transformations.
         
         Yields:
-            torch.Tensor: Transformed images batch.
-            torch.Tensor: Corresponding labels.
+            dict: A dictionary containing 'images_input'
         """
-        for images, labels in super(CustomDataLoader, self).__iter__():
+        for batch in super(CustomDataLoader, self).__iter__():
             # Apply batch-level transformations (if provided)
-            if self.transform:
-                images = self.transform(images)
+            if self.transform == 'train':
+                batch["images_gt"] = self.transform_GT(batch["images_input"])
+                batch["images_input"] = self.train_transform_input(batch["images_input"])
+
+            if self.transform == 'val':
+                batch["images_gt"] = self.transform_GT(batch["images_input"])
+                batch["images_input"] = self.val_transform_input(batch["images_input"])
+                
+            # Move images to GPU
+            # batch['input_images'] = batch['input_images'].to("cuda:0")
+            # batch['gt_images'] = batch['gt_images'].to("cuda:0")
             
-            # Move labels to GPU
-            yield images, labels.to("cuda:0")
+            yield batch
