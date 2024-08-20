@@ -11,5 +11,5 @@ class NumpyToCudaTensor:
 
 class ToDeviceAndNormalize:
     def __call__(self, batch: np.ndarray) -> torch.Tensor:
-        batch_tensor = batch.to('cuda').float() / torch.tensor(255.0).float()
+        batch_tensor = batch.to('cuda').float() #/ torch.tensor(255.0).float()
         return batch_tensor
