@@ -9,7 +9,7 @@ import numpy as np
 # Custom ToDeviceAndNormalize transform for batch input
 class ToDevice:
     def __init__(self, device='cuda:0'):
-        self.device = device
+        self.device = device if torch.cuda.is_available() else "cpu"
 
     def __call__(self, batch):
         batch = batch.to(self.device)

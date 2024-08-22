@@ -2,7 +2,7 @@ import os
 import zipfile
 
 class SaveProjectFiles:
-    def __init__(self, source_dirs=None, output_zip='dumped_files.zip', target_dir=None):
+    def __init__(self, source_dirs=None, output_zip='training_files.zip', target_dir=None):
         """
         Initialize the ProjectDumper with the source directories, output .zip file name, 
         and target directory for the .zip file.
@@ -16,11 +16,11 @@ class SaveProjectFiles:
         """
         # Set the default directory to 'project_folder/src' if no directories are provided
         # default_path = os.path.join(os.getcwd(), 'project_folder/src')
-        directories_to_dump = [
-            os.path.join(os.getcwd(), 'src'),
-            os.path.join(os.getcwd(), 'parameters')
-        ]
-        self.source_dirs = directories_to_dump# or [default_path]
+        # directories_to_dump = [
+        #     os.path.join(os.getcwd(), 'src'),
+        #     os.path.join(os.getcwd(), 'parameters')
+        # ]
+        self.source_dirs = source_dirs# or [default_path]
         
         # Set the target directory
         self.target_dir = target_dir or os.getcwd()
@@ -74,13 +74,13 @@ class SaveProjectFiles:
         self.dump_to_zip()
         print("Dumping complete.")
 
-# Example usage:
-if __name__ == "__main__":
-    # List of specific directories to include in the dump, or use default
-    directories_to_dump = None  # or specify paths like ['/path/to/first/folder', ...]
+# # Example usage:
+# if __name__ == "__main__":
+#     # List of specific directories to include in the dump, or use default
+#     directories_to_dump = None  # or specify paths like ['/path/to/first/folder', ...]
 
-    # Specify the target directory for the zip file
-    target_directory = os.path.join(os.getcwd(), 'log_train')
+#     # Specify the target directory for the zip file
+#     target_directory = os.path.join(os.getcwd(), 'log_train')
 
-    dumper = SaveProjectFiles(source_dirs=directories_to_dump, target_dir=target_directory)
-    dumper.execute()
+#     dumper = SaveProjectFiles(source_dirs=directories_to_dump, target_dir=target_directory)
+#     dumper.execute()

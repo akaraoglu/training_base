@@ -25,7 +25,7 @@ def set_random_seeds(seed):
 
 
 # Function to create DataLoaders for training and validation datasets
-def create_dataloaders(data_dir, class_names, batch_size=4, num_workers=4, pin_memory=True, seed=None):
+def create_dataloaders(data_dir, class_names, batch_size=4, num_workers=4, pin_memory=True, seed=None, device=None):
     """
     Create DataLoaders for training and validation datasets with batch-level transformations.
 
@@ -61,7 +61,8 @@ def create_dataloaders(data_dir, class_names, batch_size=4, num_workers=4, pin_m
             num_workers=num_workers,
             pin_memory=pin_memory,
             collate_fn=custom_collate_fn,
-            transform=x
+            transform=x,
+            device=device
         )
         for x in ['train', 'val']
     }
@@ -172,7 +173,7 @@ class CustomImageDataset(Dataset):
 
 # Custom DataLoader with batch-level transformations
 class CustomDataLoader(DataLoader):
-    def __init__(self, dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=False, collate_fn=None, transform=None):
+    def __init__(self, dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=False, collate_fn=None, transform=None, device=None):
         """
         Initialize the CustomDataLoader.
 
@@ -195,7 +196,7 @@ class CustomDataLoader(DataLoader):
         )
         # Define the transformations for training and validation
         self.train_transform_input = v2.Compose([
-            CDA.ToDevice(),
+            CDA.ToDevice(device=device),
             CDA.BoostBrightness(threshold=0.87, boost_factor=2), 
             v2.RandomHorizontalFlip(p=0.5),
             v2.RandomVerticalFlip(p=0.5),
@@ -206,7 +207,7 @@ class CustomDataLoader(DataLoader):
 
         # Define the transformations for training and validation
         self.val_transform_input = v2.Compose([
-            CDA.ToDevice(),
+            CDA.ToDevice(device=device),
             CDA.BoostBrightness(threshold=0.87, boost_factor=2), 
             # v2.RandomHorizontalFlip(p=0.5),
             # v2.RandomVerticalFlip(p=0.5),
@@ -223,11 +224,12 @@ class CustomDataLoader(DataLoader):
         # ])
 
         self.transform_GT = v2.Compose([
-            CDA.ToDevice(),
+            CDA.ToDevice(device=device),
             v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
         
         self.transform = transform
+        self.device = device
 
     def __iter__(self):
         """
@@ -245,9 +247,5 @@ class CustomDataLoader(DataLoader):
             if self.transform == 'val':
                 batch["images_gt"] = self.transform_GT(batch["images_input"])
                 batch["images_input"] = self.val_transform_input(batch["images_input"])
-                
-            # Move images to GPU
-            # batch['input_images'] = batch['input_images'].to("cuda:0")
-            # batch['gt_images'] = batch['gt_images'].to("cuda:0")
             
             yield batch
