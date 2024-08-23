@@ -25,13 +25,12 @@ def set_random_seeds(seed):
 
 
 # Function to create DataLoaders for training and validation datasets
-def create_dataloaders(data_dir, class_names, batch_size=4, num_workers=4, pin_memory=True, seed=None, device=None):
+def create_dataloaders(train_image_paths, val_image_paths, batch_size=4, num_workers=4, pin_memory=True, seed=None, device=None):
     """
     Create DataLoaders for training and validation datasets with batch-level transformations.
 
     Args:
         data_dir (str): Directory containing the data.
-        class_names (list): List of class names corresponding to subdirectories in data_dir.
         batch_size (int): Number of samples per batch.
         num_workers (int): Number of subprocesses to use for data loading.
         pin_memory (bool): Whether to copy tensors into CUDA pinned memory. 
@@ -48,8 +47,8 @@ def create_dataloaders(data_dir, class_names, batch_size=4, num_workers=4, pin_m
 
     # Create datasets without applying transformations initially
     image_datasets = {
-        'train': CustomImageDataset(os.path.join(data_dir, 'train'), class_names),
-        'val': CustomImageDataset(os.path.join(data_dir, 'val'), class_names)
+        'train': CustomImageDataset(train_image_paths),
+        'val': CustomImageDataset(val_image_paths)
     }
 
     # Create DataLoaders with transformations applied at the batch level
@@ -95,7 +94,7 @@ def custom_collate_fn(batch):
 
 # Custom Image Dataset for loading images and labels
 class CustomImageDataset(Dataset):
-    def __init__(self, img_dir, class_names, transform=None):
+    def __init__(self, img_paths, transform=None):
         """
         Initialize the CustomImageDataset.
 
@@ -104,19 +103,8 @@ class CustomImageDataset(Dataset):
             class_names (list): List of class names (subdirectory names).
             transform (callable, optional): Optional transform to be applied on a sample.
         """
-        self.img_dir = img_dir
-        self.class_names = class_names
+        self.img_paths = img_paths
         self.transform = transform
-        self.img_paths = []
-        self.labels = []
-
-        # Collect image paths and corresponding labels
-        for class_name in class_names:
-            class_dir = os.path.join(img_dir, class_name)
-            for img_name in os.listdir(class_dir):
-                if img_name.endswith(".jpg"):
-                    self.img_paths.append(os.path.join(class_dir, img_name))
-                    self.labels.append(class_names.index(class_name))
 
     def __len__(self):
         return len(self.img_paths)

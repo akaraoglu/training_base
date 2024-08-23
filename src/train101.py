@@ -12,7 +12,8 @@ from multiprocessing import freeze_support
 from datetime import datetime
 
 from src.CustomDataset import create_dataloaders
-from src.ModelUnet import ShallowUNet
+from src.models.ModelUnet import ShallowUNet
+from src.models.LiteHDRNet import LiteHDRNet
 from toolset.DumpProjectFiles import SaveProjectFiles
 from toolset.ConfigParser import Config
 """
@@ -60,9 +61,14 @@ class Trainator101:
 
         # Initialize the loss function, optimizer, and scheduler
         self.criterion = nn.MSELoss()  # Using MSELoss for image-to-image tasks
-        self.optimizer = optim.SGD(self.model.parameters(), lr=self.config.learning_rate, momentum=self.config.momentum)
-        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=self.config.step_size, gamma=self.config.gamma)
+        # self.optimizer = optim.SGD(self.model.parameters(), lr=self.config.learning_rate, momentum=self.config.momentum)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.config.learning_rate)
 
+        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=self.config.step_size, gamma=self.config.gamma)
+        
+        self.train_image_paths   = [line.strip() for line in open(self.config.train_image_paths)]
+        self.val_image_paths     = [line.strip() for line in open(self.config.val_image_paths)]
+        
         # Initialize DataLoaders
         self.dataloaders, self.dataset_sizes = self._create_dataloaders()
         
@@ -75,25 +81,24 @@ class Trainator101:
         dumper = SaveProjectFiles(source_dirs=directories_to_dump, output_zip="training_files.zip",target_dir=self.training_log_dir)
         dumper.execute()
 
-
     def getLogDir(self):
         return self.training_log_dir
     
     def _initialize_model(self):
         """Initialize and modify the model to an image-to-image network."""
-        model = ShallowUNet(in_channels=3, out_channels=3)  # U-Net with 3 input channels and 3 output channels
+        model = LiteHDRNet(3, 3, 32)  # U-Net with 3 input channels and 3 output channels
         model = model.to(self.device)
         return model
     
     def _create_dataloaders(self):
         """Create and return DataLoaders for training and validation."""
         return create_dataloaders(
-            self.config.data_dir,
-            self.config.class_names, 
-            batch_size=self.config.batch_size, 
-            num_workers=self.config.num_workers, 
-            pin_memory=self.config.pin_memory,
-            device = self.device
+            train_image_paths   = self.train_image_paths,
+            val_image_paths     = self.val_image_paths,
+            batch_size          = self.config.batch_size, 
+            num_workers         = self.config.num_workers, 
+            pin_memory          = self.config.pin_memory,
+            device              = self.device
         )
 
     def _denormalize(self, tensor):

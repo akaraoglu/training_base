@@ -7,8 +7,8 @@ class Config:
         self.device: str = "cpu"
         self.model_name: str = "model_name"
         self.pretrained_weights: str = "pretrained_weights"
-        self.num_classes: int = 1
-        self.class_names: List[str] = []
+        self.train_image_paths: str = "empty"
+        self.val_image_paths: str = "empty"
         self.data_dir: str = "data_dir"
         self.input_width: int = 224
         self.input_height: int = 224
@@ -34,20 +34,3 @@ class Config:
 
     def __repr__(self):
         return f'{self.__dict__}'
-
-# Usage
-if __name__ == '__main__':
-    # Path to the configuration JSON file
-    config_path = 'parameters/test_config_default.json'
-
-    # Create a Config object from the JSON file
-    config = Config(config_path)
-    
-    # Overwrite configuration values if needed
-    config.log_dir = "log_train"  # Example overwrite
-    config.input_height = 256     # Example overwrite
-    config.input_width = 256      # Example overwrite
-
-    print(config.log_dir)  # Access using dot notation
-    print(config.input_height)
-    print(config.input_width)

@@ -5,7 +5,9 @@ from torchvision.utils import save_image
 from torchvision import transforms
 from PIL import Image
 import json 
-from src.ModelUnet import ShallowUNet
+from src.models.ModelUnet import ShallowUNet
+from src.models.LiteHDRNet import LiteHDRNet
+
 from toolset.ConfigParser import Config
 
 class Testification101:
@@ -32,7 +34,7 @@ class Testification101:
 
     def _initialize_model(self, model_path):
         """Initialize the model and load the latest checkpoint."""
-        model = ShallowUNet(in_channels=3, out_channels=3)
+        model = LiteHDRNet(in_channels=3, out_channels=3)
         model = model.to(self.device)
 
         # Load the provided model checkpoint
@@ -87,7 +89,7 @@ if __name__ == '__main__':
     # Load configuration from JSON file
     config_path = 'parameters/test_config_default.json'
     config = Config(config_path)
-    
+
     # Overwrite configuration values if needed
     config.device = "cpu"
     config.log_dir = "log_train/training_20240821_130930/"  # Example overwrite
