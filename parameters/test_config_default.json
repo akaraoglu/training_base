@@ -6,15 +6,15 @@
     "input_width": 150,
     "input_height": 150,
     "batch_size": 32,
-    "num_workers": 1,
+    "num_workers": 16,
     "pin_memory": true,
     "learning_rate": 0.0001,
     "momentum": 0.9,
-    "step_size": 5,
+    "step_size": 7,
     "gamma": 0.1,
     "output_model_path": "log_train",
     "log_dir" : "log_train",
-    "num_epochs": 10,
-    "val_interval": 10,
-    "save_interval": 10
+    "num_epochs": 1,
+    "val_interval": 1,
+    "save_interval": 1
 }

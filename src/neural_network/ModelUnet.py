@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 class ShallowUNet(nn.Module):
-    def __init__(self, in_channels=3, out_channels=3):
+    def __init__(self, in_channels=3, out_channels=3, n=32):
         super(ShallowUNet, self).__init__()
 
         # Encoder

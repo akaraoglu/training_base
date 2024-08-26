@@ -184,18 +184,18 @@ class CustomDataLoader(DataLoader):
         )
         # Define the transformations for training and validation
         self.train_transform_input = v2.Compose([
-            CDA.ToDevice(device=device),
+            # CDA.ToDevice(device=device),
             CDA.BoostBrightness(threshold=0.87, boost_factor=2), 
-            v2.RandomHorizontalFlip(p=0.5),
-            v2.RandomVerticalFlip(p=0.5),
-            v2.RandomCrop((150,150)),
-            v2.ColorJitter(brightness=.5, hue=.3),
+            # v2.RandomHorizontalFlip(p=0.5),
+            # v2.RandomVerticalFlip(p=0.5),
+            # v2.RandomCrop((150,150)),
+            # v2.ColorJitter(brightness=.5, hue=.3),
             v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
 
         # Define the transformations for training and validation
         self.val_transform_input = v2.Compose([
-            CDA.ToDevice(device=device),
+            # CDA.ToDevice(device=device),
             CDA.BoostBrightness(threshold=0.87, boost_factor=2), 
             # v2.RandomHorizontalFlip(p=0.5),
             # v2.RandomVerticalFlip(p=0.5),
@@ -205,15 +205,19 @@ class CustomDataLoader(DataLoader):
         ])
 
 
-        # # Define the transformations for training and validation
-        # self.transform_GT = v2.Compose([
-        #     CDA.ToDevice(),
-        #     CDA.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        # ])
+        # Define the transformations for training and validation
+        self.transform_GT_val = v2.Compose([
+            CDA.ToDevice(),
+            # CDA.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
 
-        self.transform_GT = v2.Compose([
+        self.transform_GT_train = v2.Compose([
             CDA.ToDevice(device=device),
-            v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            v2.RandomHorizontalFlip(p=0.5),
+            v2.RandomVerticalFlip(p=0.5),
+            v2.RandomCrop((150,150)),
+            v2.ColorJitter(brightness=.5, hue=.3),
+            # v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
         
         self.transform = transform
@@ -229,11 +233,11 @@ class CustomDataLoader(DataLoader):
         for batch in super(CustomDataLoader, self).__iter__():
             # Apply batch-level transformations (if provided)
             if self.transform == 'train':
-                batch["images_gt"] = self.transform_GT(batch["images_input"])
-                batch["images_input"] = self.train_transform_input(batch["images_input"])
+                batch["images_gt"] = self.transform_GT_train(batch["images_input"])
+                batch["images_input"] = self.train_transform_input(batch["images_gt"])
 
             if self.transform == 'val':
-                batch["images_gt"] = self.transform_GT(batch["images_input"])
-                batch["images_input"] = self.val_transform_input(batch["images_input"])
+                batch["images_gt"] = self.transform_GT_val(batch["images_input"])
+                batch["images_input"] = self.val_transform_input(batch["images_gt"])
             
             yield batch

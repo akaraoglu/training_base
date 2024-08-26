@@ -1,0 +1,12 @@
+# Ignore Python compiled files
+*.pyc
+*.pyo
+
+
+# Ignore virtual environment directories
+env-pytorch/
+.env/
+
+# Ignore specific files or directories
+log_train/
+*.log

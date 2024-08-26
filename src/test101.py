@@ -5,8 +5,8 @@ from torchvision.utils import save_image
 from torchvision import transforms
 from PIL import Image
 import json 
-from src.models.ModelUnet import ShallowUNet
-from src.models.LiteHDRNet import LiteHDRNet
+from src.neural_network.ModelUnet import ShallowUNet
+from src.neural_network.LiteHDRNet import LiteHDRNet
 
 from toolset.ConfigParser import Config
 

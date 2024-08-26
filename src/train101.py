@@ -12,33 +12,13 @@ from multiprocessing import freeze_support
 from datetime import datetime
 
 from src.CustomDataset import create_dataloaders
-from src.models.ModelUnet import ShallowUNet
-from src.models.LiteHDRNet import LiteHDRNet
+from src.neural_network.ModelUnet import ShallowUNet
+from src.neural_network.LiteHDRNet import LiteHDRNet
+
 from toolset.DumpProjectFiles import SaveProjectFiles
 from toolset.ConfigParser import Config
-"""
- TODO:
- Verify the input, output and ground truth images.
- training verification.
-  - Test class
-  - Load the model and run a test image. 
-  - Write test codes. (Automated smoke test)
+from src.losses.loss_functions import LossSelector
 
-Machine Learning Engineer Responsibilities
-- Implementing machine learning algorithms
-- Running AI systems experiments and tests
-- Designing and developing machine learning systems
-- Performing statistical analyses 
-
-Fix the test code.
-Load json before the class and send the config as dict.
-Overwrite the variables in the config. 
-Arrange the directories 
-Limit the amount of images use in the test.
-
-Automatize!!!!!
-
-"""
 
 class Trainator101:
     def __init__(self, config: Config):
@@ -56,11 +36,20 @@ class Trainator101:
         # Initialize the TensorBoard writer with the specific log directory
         self.writer = SummaryWriter(log_dir=self.training_log_dir)
 
+
         # Initialize the model
         self.model = self._initialize_model()
 
         # Initialize the loss function, optimizer, and scheduler
-        self.criterion = nn.MSELoss()  # Using MSELoss for image-to-image tasks
+        self.loss_config = {
+            "mse": 1.0,
+            "ssim": 0.5
+            # "perceptual": 0.2
+        }
+
+        # Initialize the LossSelector with multiple losses
+        self.criterion = LossSelector(loss_config=self.loss_config)
+
         # self.optimizer = optim.SGD(self.model.parameters(), lr=self.config.learning_rate, momentum=self.config.momentum)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.config.learning_rate)
 
@@ -72,12 +61,52 @@ class Trainator101:
         # Initialize DataLoaders
         self.dataloaders, self.dataset_sizes = self._create_dataloaders()
         
-        self.dumpTrainingCodeAndParameters()
         
+        # Print training information
+        self.print_training_info()
+        self.dumpTrainingCodeAndParameters()
+        print("")
+        print("Training starting...")
+    
+    def print_training_info(self):
+        """Print important training information."""
+        developer = "Developer: Ali Karaoglu   ©2024 VisuAlysium"
+        date_info = f"Date: {datetime.now().strftime('%Y-%m-%d')}"
+        legal_info = "License: MIT"
+        
+
+        info_lines = [
+            developer,
+            date_info,
+            legal_info,
+            "-" * 50,  # A separator line
+            f"Log Directory: {self.training_log_dir}",
+            f"Device: {self.device}",
+            f"Model: {self.model.__class__.__name__}",
+            f"Loss Function: {self.criterion.__class__.__name__}",
+            f"Loss Function: {self.loss_config}",
+            f"Optimizer: {self.optimizer.__class__.__name__}",
+            f"Learning Rate: {self.config.learning_rate}",
+            f"Batch Size: {self.config.batch_size}",
+            f"Number of Epochs: {self.config.num_epochs}",
+            f"Training Images: {len(self.train_image_paths)}",
+            f"Validation Images: {len(self.val_image_paths)}",
+            f"Save Interval: {self.config.save_interval} epochs",
+            f"Validation Interval: {self.config.val_interval} epochs",
+            "-" * 50,  # Another separator line
+        ]
+
+        max_length = max(len(line) for line in info_lines)
+        border = "+" + "-" * (max_length + 2) + "+"
+
+        print("\n" + border)
+        for line in info_lines:
+            print(f"| {line.ljust(max_length)} |")
+        print(border + "\n")
+
     def dumpTrainingCodeAndParameters(self):
         # Example usage:
         directories_to_dump = ["/src", "/parameters"] # or specify paths like ['/path/to/first/folder', ...]
-
         dumper = SaveProjectFiles(source_dirs=directories_to_dump, output_zip="training_files.zip",target_dir=self.training_log_dir)
         dumper.execute()
 
@@ -115,7 +144,7 @@ class Trainator101:
             # Denormalize the images before logging
             inputs_denorm = self._denormalize(inputs.clone())
             outputs_denorm = self._denormalize(outputs.clone())
-            targets_denorm = self._denormalize(targets.clone())
+            targets_denorm = targets #self._denormalize(targets.clone())
 
             # Log a grid of input images, outputs, and targets
             img_grid = make_grid(torch.cat((inputs_denorm, outputs_denorm, targets_denorm)))
@@ -150,7 +179,7 @@ class Trainator101:
 
             with torch.set_grad_enabled(phase == 'train'):
                 outputs = self.model(images_boosted)
-                loss = self.criterion(outputs, images_gt)
+                loss = self.criterion(self._denormalize(outputs), images_gt)
 
                 if phase == 'train':
                     loss.backward()

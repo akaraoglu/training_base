@@ -63,7 +63,7 @@ class SaveProjectFiles:
                         arcname = os.path.join(base_dir, relative_path)
                         # Add the file to the zip file with its adjusted path
                         zipf.write(file_path, arcname=arcname)
-                        print(f"Added {file_path} as {arcname}")
+                        # print(f"Added {file_path} as {arcname}")
                         break  # Stop after finding the correct source_dir
 
     def execute(self):
@@ -72,7 +72,7 @@ class SaveProjectFiles:
         """
         print(f"Dumping .py and .json files from {self.source_dirs} to {self.output_zip}...")
         self.dump_to_zip()
-        print("Dumping complete.")
+        print("Done.")
 
 # # Example usage:
 # if __name__ == "__main__":

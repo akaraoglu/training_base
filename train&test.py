@@ -2,6 +2,29 @@ from src.test101 import Testification101
 from src.train101 import Trainator101
 from toolset.ConfigParser import Config
     
+"""
+ TODO:
+ Verify the input, output and ground truth images.
+ training verification.
+  - Write test codes. (Automated smoke test)
+
+Machine Learning Engineer Responsibilities
+- Implementing machine learning algorithms
+- Running AI systems experiments and tests
+- Designing and developing machine learning systems
+- Performing statistical analyses 
+
+Fix the test code.
+Load json before the class and send the config as dict.
+Overwrite the variables in the config. 
+Arrange the directories 
+Limit the amount of images use in the test.
+
+Automatize!!!!!
+
+Docker integration? 
+
+"""
 
 if __name__ == '__main__':
     """
@@ -27,8 +50,7 @@ if __name__ == '__main__':
     print("Initializing testing...")
     config_path_test = 'parameters/test_config_default.json'
     config_test = Config(config_path_test)
-
-    
+        
     # Overwrite configuration values if needed
     config_test.device = "cpu"
     config_test.log_dir = trainer.getLogDir()
