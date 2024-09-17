@@ -3,10 +3,7 @@ from src.train101 import Trainator101
 from toolset.ConfigParser import Config
     
 """
- TODO:
- Verify the input, output and ground truth images.
- training verification.
-  - Write test codes. (Automated smoke test)
+TODO:
 
 Machine Learning Engineer Responsibilities
 - Implementing machine learning algorithms
@@ -14,13 +11,9 @@ Machine Learning Engineer Responsibilities
 - Designing and developing machine learning systems
 - Performing statistical analyses 
 
-Fix the test code.
-Load json before the class and send the config as dict.
-Overwrite the variables in the config. 
-Arrange the directories 
-Limit the amount of images use in the test.
-
-Automatize!!!!!
+Verify the input, output and ground truth images.
+Limit the amount of images use in the training.
+Use all the settings in the paramter file json. 
 
 Docker integration? 
 
@@ -30,6 +23,7 @@ if __name__ == '__main__':
     """
     Function to load settings, run training, and then run testing to save the results.
     """
+    test_only = False
 
     # Define paths
     config_path_train = 'parameters/training_config_default.json'  # Path to the training configuration file
@@ -41,28 +35,39 @@ if __name__ == '__main__':
     # Load settings from the JSON file
     config_train = Config(config_path_train)
 
-    trainer = Trainator101(config=config_train)
-    best_model = trainer.train_model()
-    trainer.close()
-    print("Training completed.")
-
     # Step 2: Initialize and run testing using Testification101
     print("Initializing testing...")
     config_path_test = 'parameters/test_config_default.json'
     config_test = Config(config_path_test)
+
+    if test_only:
+        # Overwrite configuration values if needed
+        config_test.device = "cuda:0"
+        config_test.log_dir = "log_train/training_20240828_133849/"  # Example overwrite
+
+        # Directory containing test images
+        test_images_dir = 'E:/datasets/imagenet/val'
         
-    # Overwrite configuration values if needed
-    config_test.device = "cpu"
-    config_test.log_dir = trainer.getLogDir()
+        # Path to a specific model checkpoint (if any)
+        model_path = "log_train/training_20240828_133849/model_epoch_100.pth"
+    else:
+       
+        trainer = Trainator101(config=config_train)
+        best_model = trainer.train_model()
+        trainer.close()
+        print("Training completed.")
 
-    # Directory containing test images
-    test_images_dir = 'E:/datasets/intel_obj/pred'
-    
-    # Path to a specific model checkpoint (if any)
-    model_path = trainer._get_latest_checkpoint() #"log_train/training_20240821_130930/model_epoch_1.pth"
+        # Overwrite configuration values if needed
+        config_test.device = "cpu"
+        config_test.log_dir = trainer.getLogDir()
+        # Directory containing test images
+        test_images_dir = 'E:/datasets/intel_obj/pred'
+        # Path to a specific model checkpoint (if any)
+        model_path = trainer._get_latest_checkpoint() #"log_train/training_20240821_130930/model_epoch_1.pth"
 
+        
     # Initialize the testing class
     tester = Testification101(config_test, model_path)    
 
     # Test the model and save the results with a limit on the number of images processed
-    tester.test_model(test_images_dir, limit=10)  # Limit to 10 images
+    tester.test_model(test_images_dir, limit=100)  # Limit to 10 images

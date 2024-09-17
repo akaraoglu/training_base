@@ -7,7 +7,7 @@ from PIL import Image
 import json 
 from src.neural_network.ModelUnet import ShallowUNet
 from src.neural_network.LiteHDRNet import LiteHDRNet
-
+from src.CustomDataAugmentation import BoostBrightness
 from toolset.ConfigParser import Config
 
 class Testification101:
@@ -27,14 +27,15 @@ class Testification101:
 
         # Transformations for test images
         self.transform = transforms.Compose([
-            transforms.Resize((self.config.input_height, self.config.input_width)),
+            # transforms.Resize((self.config.input_height, self.config.input_width)),
             transforms.ToTensor(),
+            BoostBrightness(threshold=0.87, boost_factor=2), 
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
 
     def _initialize_model(self, model_path):
         """Initialize the model and load the latest checkpoint."""
-        model = LiteHDRNet(in_channels=3, out_channels=3)
+        model = ShallowUNet(in_channels=3, out_channels=3)
         model = model.to(self.device)
 
         # Load the provided model checkpoint
@@ -71,11 +72,14 @@ class Testification101:
 
             # Denormalize the output
             output_denorm = self._denormalize(output.squeeze(0))
+            image_tensor_denorm = self._denormalize(image_tensor.squeeze(0))
 
             # Save the result image
             img_name = os.path.basename(img_path)
             save_path = os.path.join(self.test_results_dir, img_name)
             save_image(output_denorm, save_path)
+            save_path = os.path.join(self.test_results_dir, ("input_"+img_name))
+            save_image(image_tensor_denorm, save_path)
             print(f"Saved result image to {save_path}")
 
     def _denormalize(self, tensor):
@@ -91,14 +95,14 @@ if __name__ == '__main__':
     config = Config(config_path)
 
     # Overwrite configuration values if needed
-    config.device = "cpu"
-    config.log_dir = "log_train/training_20240821_130930/"  # Example overwrite
+    config.device = "cuda:0"
+    config.log_dir = "log_train/training_20240828_133849/"  # Example overwrite
 
     # Directory containing test images
     test_images_dir = 'E:/datasets/intel_obj/pred'
     
     # Path to a specific model checkpoint (if any)
-    model_path = "log_train/training_20240821_130930/model_epoch_1.pth"
+    model_path = "log_train/training_20240828_133849/model_epoch_100.pth"
 
     # Initialize the testing class
     tester = Testification101(config, model_path)    

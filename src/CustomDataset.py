@@ -185,7 +185,7 @@ class CustomDataLoader(DataLoader):
         # Define the transformations for training and validation
         self.train_transform_input = v2.Compose([
             # CDA.ToDevice(device=device),
-            CDA.BoostBrightness(threshold=0.87, boost_factor=2), 
+            CDA.BoostBrightness(threshold=0.0, boost_factor=1.2), 
             # v2.RandomHorizontalFlip(p=0.5),
             # v2.RandomVerticalFlip(p=0.5),
             # v2.RandomCrop((150,150)),
@@ -196,7 +196,7 @@ class CustomDataLoader(DataLoader):
         # Define the transformations for training and validation
         self.val_transform_input = v2.Compose([
             # CDA.ToDevice(device=device),
-            CDA.BoostBrightness(threshold=0.87, boost_factor=2), 
+            CDA.BoostBrightness(threshold=0.0, boost_factor=1.2), 
             # v2.RandomHorizontalFlip(p=0.5),
             # v2.RandomVerticalFlip(p=0.5),
             # v2.RandomCrop((150,150)),

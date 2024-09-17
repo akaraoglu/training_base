@@ -44,7 +44,6 @@ class Trainator101:
         self.loss_config = {
             "mse": 1.0,
             "ssim": 0.5
-            # "perceptual": 0.2
         }
 
         # Initialize the LossSelector with multiple losses
@@ -53,8 +52,10 @@ class Trainator101:
         # self.optimizer = optim.SGD(self.model.parameters(), lr=self.config.learning_rate, momentum=self.config.momentum)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.config.learning_rate)
 
-        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=self.config.step_size, gamma=self.config.gamma)
+        # self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=self.config.step_size, gamma=self.config.gamma)
         
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, factor=0.5, verbose=True, patience=4)
+
         self.train_image_paths   = [line.strip() for line in open(self.config.train_image_paths)]
         self.val_image_paths     = [line.strip() for line in open(self.config.val_image_paths)]
         
@@ -115,7 +116,7 @@ class Trainator101:
     
     def _initialize_model(self):
         """Initialize and modify the model to an image-to-image network."""
-        model = LiteHDRNet(3, 3, 32)  # U-Net with 3 input channels and 3 output channels
+        model = ShallowUNet(3, 3, 32)  # U-Net with 3 input channels and 3 output channels
         model = model.to(self.device)
         return model
     
@@ -140,16 +141,16 @@ class Trainator101:
     def _log_to_tensorboard(self, epoch, phase, loss, inputs, outputs, targets):
         """Log training metrics and images to TensorBoard."""
         self.writer.add_scalar(f'{phase} Loss', loss, epoch)
-        if phase == 'train':
-            # Denormalize the images before logging
-            inputs_denorm = self._denormalize(inputs.clone())
-            outputs_denorm = self._denormalize(outputs.clone())
-            targets_denorm = targets #self._denormalize(targets.clone())
+        
+        # Denormalize the images before logging
+        inputs_denorm = self._denormalize(inputs.clone())
+        outputs_denorm = self._denormalize(outputs.clone())
+        targets_denorm = targets #self._denormalize(targets.clone())
 
-            # Log a grid of input images, outputs, and targets
-            img_grid = make_grid(torch.cat((inputs_denorm, outputs_denorm, targets_denorm)))
-            self.writer.add_image(f'{phase} Images (Inputs | Outputs | Targets)', img_grid, epoch)
-    
+        # Log a grid of input images, outputs, and targets
+        img_grid = make_grid(torch.cat((inputs_denorm, outputs_denorm, targets_denorm)))
+        self.writer.add_image(f'{phase} Images (Inputs | Outputs | Targets)', img_grid, epoch)
+
     def _run_epoch(self, epoch):
         """Run both training and validation phases of a given epoch."""
         # Training phase
@@ -187,10 +188,10 @@ class Trainator101:
 
             running_loss += loss.item() * images_boosted.size(0)
 
-        if phase == 'train':
-            self.scheduler.step()
-
         epoch_loss = running_loss / self.dataset_sizes[phase]
+
+        if phase == 'train':
+            self.scheduler.step(epoch_loss)
 
         # Log to TensorBoard
         self._log_to_tensorboard(epoch, phase, epoch_loss, images_boosted, outputs, images_gt)
