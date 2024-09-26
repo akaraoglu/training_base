@@ -8,7 +8,7 @@ import json
 from src.neural_network.ModelUnet import ShallowUNet
 from src.neural_network.LiteHDRNet import LiteHDRNet
 from src.CustomDataAugmentation import BoostBrightness
-from toolset.ConfigParser import Config
+from src.utils.ConfigParser import Config
 
 class Testification101:
     def __init__(self, config: Config, model_path: str):

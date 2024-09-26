@@ -3,7 +3,7 @@ import torch
 import os
 from unittest.mock import MagicMock, patch
 from src.train101 import Trainator101
-from toolset.ConfigParser import Config
+from src.utils.ConfigParser import Config
 from src.neural_network.LiteHDRNet import LiteHDRNet
 
 class TestTrainator101(unittest.TestCase):

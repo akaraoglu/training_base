@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import json
 import glob
@@ -15,8 +16,8 @@ from src.CustomDataset import create_dataloaders
 from src.neural_network.ModelUnet import ShallowUNet
 from src.neural_network.LiteHDRNet import LiteHDRNet
 
-from toolset.DumpProjectFiles import SaveProjectFiles
-from toolset.ConfigParser import Config
+from src.utils.DumpProjectFiles import SaveProjectFiles
+from src.utils.ConfigParser import Config
 from src.losses.loss_functions import LossSelector
 
 
@@ -54,28 +55,47 @@ class Trainator101:
 
         # self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=self.config.step_size, gamma=self.config.gamma)
         
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, factor=0.5, verbose=True, patience=4)
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, factor=0.5, patience=4)
 
-        self.train_image_paths   = [line.strip() for line in open(self.config.train_image_paths)]
-        self.val_image_paths     = [line.strip() for line in open(self.config.val_image_paths)]
+        self.train_image_paths = [os.path.join(self.config.dataset_path, line.strip()) for line in open(self.config.train_image_paths)]
+        self.val_image_paths = [os.path.join(self.config.dataset_path, line.strip()) for line in open(self.config.val_image_paths)]
         
         # Initialize DataLoaders
         self.dataloaders, self.dataset_sizes = self._create_dataloaders()
         
+        # Dump the code and parameters
+        self.dumpTrainingCodeAndParameters()
         
         # Print training information
         self.print_training_info()
-        self.dumpTrainingCodeAndParameters()
+        
         print("")
         print("Training starting...")
     
     def print_training_info(self):
-        """Print important training information."""
+        """Print important training information, including GPU, Python, PyTorch, CUDA, and cuDNN details."""
         developer = "Developer: Ali Karaoglu   ©2024 VisuAlysium"
         date_info = f"Date: {datetime.now().strftime('%Y-%m-%d')}"
         legal_info = "License: MIT"
         
+        # GPU Information
+        if torch.cuda.is_available():
+            num_gpus = torch.cuda.device_count()
+            gpu_info = []
+            for i in range(num_gpus):
+                gpu_name = torch.cuda.get_device_name(i)
+                gpu_memory_total = torch.cuda.get_device_properties(i).total_memory // (1024 ** 2)  # Convert to MB
+                gpu_info.append(f"GPU {i}: {gpu_name} ({gpu_memory_total} MB memory)")
+        else:
+            gpu_info = ["No GPUs available, using CPU"]
 
+        # Python, PyTorch, CUDA, cuDNN Versions
+        python_version = sys.version.split(" ")[0]
+        pytorch_version = torch.__version__
+        cuda_version = torch.version.cuda if torch.cuda.is_available() else "Not available"
+        cudnn_version = torch.backends.cudnn.version() if torch.backends.cudnn.is_available() else "Not available"
+
+        # Training Information
         info_lines = [
             developer,
             date_info,
@@ -85,7 +105,7 @@ class Trainator101:
             f"Device: {self.device}",
             f"Model: {self.model.__class__.__name__}",
             f"Loss Function: {self.criterion.__class__.__name__}",
-            f"Loss Function: {self.loss_config}",
+            f"Loss Config: {self.loss_config}",
             f"Optimizer: {self.optimizer.__class__.__name__}",
             f"Learning Rate: {self.config.learning_rate}",
             f"Batch Size: {self.config.batch_size}",
@@ -95,8 +115,17 @@ class Trainator101:
             f"Save Interval: {self.config.save_interval} epochs",
             f"Validation Interval: {self.config.val_interval} epochs",
             "-" * 50,  # Another separator line
+            f"Python Version: {python_version}",
+            f"PyTorch Version: {pytorch_version}",
+            f"CUDA Version: {cuda_version}",
+            f"cuDNN Version: {cudnn_version}",
+            "-" * 50,  # Another separator line for GPU info
         ]
 
+        # Add GPU information to the list
+        info_lines.extend(gpu_info)
+
+        # Format and print the info
         max_length = max(len(line) for line in info_lines)
         border = "+" + "-" * (max_length + 2) + "+"
 
@@ -107,7 +136,7 @@ class Trainator101:
 
     def dumpTrainingCodeAndParameters(self):
         # Example usage:
-        directories_to_dump = ["/src", "/parameters"] # or specify paths like ['/path/to/first/folder', ...]
+        directories_to_dump = ["src", "parameters"] # or specify paths like ['/path/to/first/folder', ...]
         dumper = SaveProjectFiles(source_dirs=directories_to_dump, output_zip="training_files.zip",target_dir=self.training_log_dir)
         dumper.execute()
 

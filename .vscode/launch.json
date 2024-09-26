@@ -1,22 +1,23 @@
 {
-  // Use IntelliSense to learn about possible attributes.
-  // Hover to view descriptions of existing attributes.
-  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python Debugger: Current File (Integrated Terminal)",
+      "name": "Python Debugger: Current File",
       "type": "debugpy",
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal"
     },
     {
-      "name": "Python Debugger: Current File (External Terminal)",
+      "name": "Python: Run Script with Default Config",
       "type": "debugpy",
       "request": "launch",
-      "program": "${file}",
-      "console": "externalTerminal"
+      "program": "${workspaceFolder}/train&test.py",
+      "env": {
+        "CONFIG_PATH_TRAIN": "parameters/training_config_default.json",
+        "CONFIG_PATH_TEST": "parameters/test_config_default.json",
+        "TEST_ONLY": "False"
+      }
     }
   ]
 }
